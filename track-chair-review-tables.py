@@ -44,37 +44,80 @@ data_dir = cwd / "data"
 # The Proposals table is the only table exported from Pretlax (as of 2024) that provides information on the proposal track _and_ the unique "Proposal ID". So first get all the track names
 
 # %%
-proposals = pd.read_csv( data_dir / "sessions.csv")
-talks = proposals[proposals["Session type"] == "Talk"]
+proposals = pd.read_csv(data_dir / "sessions.csv")
+submissions = proposals[proposals["Session type"] != "Tutorial"]
 
-track_names = talks["Track"].unique().tolist()
+track_names = submissions["Track"].unique().tolist()
 
 # %% [markdown]
-# and then load up _all_ the reviews and search on the "Proposal ID" to match the talk to the reviews for it for each track. Once the table has been constructed save it as a CSV under `/output` which can then be individually copied and pasted into the relevant Google Sheet.
+# and then load up _all_ the reviews and search on the "Proposal ID" to match the submission to the reviews for it for each track. Once the table has been constructed save it as a CSV under `/output` which can then be individually copied and pasted into the relevant Google Sheet.
+
+# %% [markdown]
+# The Google Sheet template also expects the columns to be in the following order:
+#
+# * Proposal ID
+# * Proposal title
+# * Session type
+# * Score
+# * Text
+# * Score in 'Overall evaluation.'
+# * Score in 'Is the proposal interesting to a broad range of people in the SciPy community?'
+# * Score in 'Is the proposal Clear?'
+# * Score in 'Is the proposal complete?'
+# * Score in 'How relevant and immediately useful is the topic?'
+# * Score in 'I have read the SciPy Conference Code of Conduct and reviewer guidelines sent to me in my confirmation email'
+# * Score in 'If there is a full paper submitted for this abstract, I would like to be a reviewer on it.'
+# * created
+# * updated
+# * Reviewer name
+# * Reviewer email
+#
+# which is not the default order from the export from Pretalx, so rearrange the column names for the final output to match this.
 
 # %%
-reviews = pd.read_csv( data_dir / "reviews.csv")
+reviews = pd.read_csv(data_dir / "reviews.csv")
 
 # reorder columns to match example
 column_names = reviews.columns.tolist()
-column_names = column_names[9:11] + column_names[0:9] + column_names[11:]
+column_names = (
+    column_names[9:11] + ["Session type"] + column_names[0:9] + column_names[11:]
+)
 
 # %%
 for track_name in track_names:
     print(f"Creating review table for track: {track_name}")
 
     track_review = pd.DataFrame(columns=reviews.keys())
-    
-    track_talk_selection = talks["Track"] == track_name
-    track_proposal_id = talks[track_talk_selection]["ID"].tolist()
-    
-    for proposal_id in track_proposal_id:
+
+    track_submission_selection = submissions["Track"] == track_name
+    track_proposal_ids = submissions[track_submission_selection]["ID"].tolist()
+
+    for proposal_id in track_proposal_ids:
         proposal_selection = reviews["Proposal ID"] == proposal_id
         track_review = pd.concat([track_review, reviews[proposal_selection]])
-    
+
+    # Build a list to append as a column to the final dataframe
+    session_types = []
+    for proposal_id in track_proposal_ids:
+        # First find out the type of submission of the proposal_id
+        proposal_id_seclection = submissions["ID"] == proposal_id
+        session_type = submissions[proposal_id_seclection]["Session type"].values[0]
+        # The reviews for any proposal ID are grouped sequentially, so can
+        # add the same number of session types as there are reviews
+        track_review_proposal_id_counts = track_review["Proposal ID"].value_counts()
+        n_reviews = track_review["Proposal ID"].value_counts()[proposal_id]
+        # need to _not_ append but instead _add_ as joining lists
+        session_types += [session_type] * n_reviews
+
+    track_review["Session type"] = session_types
+
     # reorder columns for export
     track_review = track_review[column_names]
-    
+
     # TODO: Clean this up as a regex
-    file_name = "review_" + track_name.split(",")[0].split("/")[0].split(":")[0].lower().replace(" ", "_") + ".csv"
+    file_name = (
+        "review_"
+        + track_name.split(",")[0].split("/")[0].split(":")[0].lower().replace(" ", "_")
+        + ".csv"
+    )
     track_review.to_csv(output_dir / file_name, index=False)
