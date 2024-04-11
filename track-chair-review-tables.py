@@ -80,7 +80,10 @@ reviews = pd.read_csv(data_dir / "reviews.csv")
 # reorder columns to match example
 column_names = reviews.columns.tolist()
 column_names = (
-    column_names[9:11] + ["Session type", "Track"] + column_names[0:9] + column_names[11:]
+    column_names[9:11]
+    + ["Session type", "Track"]
+    + column_names[0:9]
+    + column_names[11:]
 )
 
 # %%
@@ -135,7 +138,15 @@ for track_name in _tmp_track_names:
 
 # %%
 # for review_file in output_dir.glob("review_*.csv"):
-column_names = ["Proposal ID", "Proposal title", "Session type", "Track", "Average score", "Status", "Number of reviewers"]
+column_names = [
+    "Proposal ID",
+    "Proposal title",
+    "Session type",
+    "Track",
+    "Average score",
+    "Status",
+    "Number of reviewers",
+]
 
 # for review_file in output_dir.glob("review_human_networks.csv"):
 for review_file in output_dir.glob("review_*.csv"):
@@ -157,12 +168,14 @@ for review_file in output_dir.glob("review_*.csv"):
         # here being lazy and doing so by column index
         scores = proposal_dataframe.iloc[:, 6:11]
         average_score = scores.sum(axis=1).mean()  # sum across the row and then average
-        
+
         data["Proposal ID"].append(proposal_id)
         data["Proposal title"].append(proposal_dataframe["Proposal title"].tolist()[0])
         data["Session type"].append(proposal_dataframe["Session type"].tolist()[0])
         data["Average score"].append(average_score)
-        data["Number of reviewers"].append(len(proposal_dataframe["Reviewer email"].unique()))
+        data["Number of reviewers"].append(
+            len(proposal_dataframe["Reviewer email"].unique())
+        )
 
     review_summary = pd.DataFrame.from_dict(data=data)
     # safe to use zero index as know this exists for entire dataframe
@@ -172,7 +185,9 @@ for review_file in output_dir.glob("review_*.csv"):
     # reorder columns for export
     review_summary = review_summary[column_names]
     # order by average score, but sort by "Session type" first to put talks at top
-    review_summary = review_summary.sort_values(by=["Session type", "Average score"], ascending=False)
+    review_summary = review_summary.sort_values(
+        by=["Session type", "Average score"], ascending=False
+    )
 
     file_name = review_file.name.replace("review", "review-summary")
     review_summary.to_csv(output_dir / file_name, index=False)
