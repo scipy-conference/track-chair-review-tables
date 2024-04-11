@@ -84,7 +84,11 @@ column_names = (
 )
 
 # %%
-for track_name in track_names:
+# for track_name in track_names:
+# c.f. https://github.com/scipy-conference/track-chair-review-tables/issues/2
+_tmp_track_names = track_names.copy()
+_tmp_track_names.remove("General")
+for track_name in _tmp_track_names:
     print(f"Creating review table for track: {track_name}")
 
     track_review = pd.DataFrame(columns=reviews.keys())
