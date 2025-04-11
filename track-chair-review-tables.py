@@ -45,8 +45,12 @@ data_dir = cwd / "data"
 
 # %%
 proposals = pd.read_csv(data_dir / "sessions.csv")
-submissions = proposals[proposals["Session type"] != "Tutorial"]
 
+# validate no NaNs
+if proposals.isnull().values.any():
+    raise ValueError(f"\n# The following propsoals have NaNs as part of their data. Please fix this in Pretalx.\n{proposals[proposals.isnull().values]}")
+
+submissions = proposals[proposals["Session type"] != "Tutorial"]
 track_names = submissions["Track"].unique().tolist()
 
 # %% [markdown]
